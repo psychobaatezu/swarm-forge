@@ -253,6 +253,24 @@
       (finally
         (fs/delete-tree root)))))
 
+(deftest opencode-launch-command-passes-initial-prompt
+  (let [root (tmp-dir)]
+    (try
+      (let [result (run {:dir root}
+                        (script "swarmforge.bb")
+                        "--test-launch-command"
+                        (str root)
+                        "opencode"
+                        "--model anthropic/claude-sonnet-4")
+            command (:out result)]
+        (is (str/includes? command "opencode run --dir "))
+        (is (str/includes? command " --auto --model anthropic/claude-sonnet-4 "))
+        (is (str/includes? command "\"$(cat "))
+        (is (str/includes? command ".swarmforge/prompts/coder.md"))
+        (is (fs/exists? (fs/path root ".swarmforge/prompts/coder.md"))))
+      (finally
+        (fs/delete-tree root)))))
+
 (deftest window-watchdog-rewrites-window-state-and-id-list
   (let [root (tmp-dir)
         state-file (fs/path root "windows.tsv")
