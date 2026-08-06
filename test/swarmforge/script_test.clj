@@ -309,8 +309,9 @@
                         "opencode"
                         "--model anthropic/claude-sonnet-4")
             command (:out result)]
-        (is (str/includes? command "opencode run --dir "))
+        (is (str/includes? command "opencode '"))
         (is (str/includes? command " --auto --model anthropic/claude-sonnet-4 "))
+        (is (str/includes? command " --prompt \"$(cat "))
         (is (str/includes? command "\"$(cat "))
         (is (str/includes? command ".swarmforge/prompts/coder.md"))
         (is (fs/exists? (fs/path root ".swarmforge/prompts/coder.md"))))
