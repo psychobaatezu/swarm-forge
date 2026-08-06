@@ -113,9 +113,6 @@
       (fs/move swarmforge-gitignore gitignore {:replace-existing true}))
     (ensure-in-file! gitignore ".swarmforge/")
     (ensure-in-file! gitignore ".worktrees/")
-    (ensure-in-file! gitignore "swarmforge")
-    (ensure-in-file! gitignore "swarm")
-    (ensure-in-file! gitignore "bb.edn")
     (when (fs/exists? swarmforge-gitignore)
       (fs/delete swarmforge-gitignore))))
 

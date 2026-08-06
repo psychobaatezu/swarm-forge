@@ -199,9 +199,6 @@
         (is (str/includes? out "jedi-archive"))
         (is (str/includes? out ".swarmforge/"))
         (is (str/includes? out ".worktrees/"))
-        (is (str/includes? out "swarmforge"))
-        (is (str/includes? out "swarm"))
-        (is (str/includes? out "bb.edn"))
         (is (str/includes? out "SWARMFORGE_GITIGNORE_REMOVED")))
       (finally
         (fs/delete-tree root)))))
@@ -215,7 +212,7 @@
                         "--test-ensure-initial-gitignore"
                         (str root))
             out (:out result)]
-        (is (str/includes? out "rebel-base-config\n.swarmforge/\n.worktrees/\nswarmforge\nswarm\nbb.edn\n"))
+        (is (str/includes? out "rebel-base-config\n.swarmforge/\n.worktrees/"))
         (is (not (str/includes? out "rebel-base-config.swarmforge/"))))
       (finally
         (fs/delete-tree root)))))
@@ -232,9 +229,6 @@
         (is (str/includes? out ".DS_Store"))
         (is (str/includes? out ".swarmforge/"))
         (is (str/includes? out ".worktrees/"))
-        (is (str/includes? out "swarmforge"))
-        (is (str/includes? out "swarm"))
-        (is (str/includes? out "bb.edn"))
         (is (str/includes? out "SWARMFORGE_GITIGNORE_REMOVED")))
       (finally
         (fs/delete-tree root)))))
