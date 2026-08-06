@@ -90,6 +90,23 @@
       (finally
         (fs/delete-tree root)))))
 
+(deftest merge-and-process-merges-provided-commit
+  (let [root (tmp-dir)]
+    (try
+      (init-repo! root)
+      (run {:dir root} "git" "checkout" "-q" "-b" "sender")
+      (write-file (fs/path root "jedi-archive") "Luke Skywalker\n")
+      (run {:dir root} "git" "add" "jedi-archive")
+      (run {:dir root} "git" "commit" "-q" "-m" "Add jedi archive")
+      (let [commit (str/trim (:out (run {:dir root} "git" "rev-parse" "--short=10" "HEAD")))]
+        (run {:dir root} "git" "checkout" "-q" "master")
+        (run {:dir root} (script "merge_and_process.sh") "coder" commit)
+        (let [head (str/trim (:out (run {:dir root} "git" "rev-parse" "HEAD")))]
+          (is (= "Luke Skywalker\n" (slurp (str (fs/path root "jedi-archive")))))
+          (is (str/starts-with? head commit))))
+      (finally
+        (fs/delete-tree root)))))
+
 (deftest swarmforge-launcher-parses-config-and-writes-state-files
   (let [root (tmp-dir)]
     (try
