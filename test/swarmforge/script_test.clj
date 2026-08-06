@@ -187,6 +187,52 @@
                     "--test-sleep-inhibitor-prefix")]
     (is (= "" (str/trim (:out result))))))
 
+(deftest ensure-initial-gitignore-appends-to-existing-file
+  (let [root (tmp-dir)]
+    (try
+      (write-file (fs/path root ".gitignore") "jedi-archive\n")
+      (let [result (run {:dir root}
+                        (script "swarmforge.bb")
+                        "--test-ensure-initial-gitignore"
+                        (str root))
+            out (:out result)]
+        (is (str/includes? out "jedi-archive"))
+        (is (str/includes? out ".swarmforge/"))
+        (is (str/includes? out ".worktrees/"))
+        (is (str/includes? out "SWARMFORGE_GITIGNORE_REMOVED")))
+      (finally
+        (fs/delete-tree root)))))
+
+(deftest ensure-initial-gitignore-preserves-existing-last-line-without-newline
+  (let [root (tmp-dir)]
+    (try
+      (write-file (fs/path root ".gitignore") "rebel-base-config")
+      (let [result (run {:dir root}
+                        (script "swarmforge.bb")
+                        "--test-ensure-initial-gitignore"
+                        (str root))
+            out (:out result)]
+        (is (str/includes? out "rebel-base-config\n.swarmforge/\n.worktrees/"))
+        (is (not (str/includes? out "rebel-base-config.swarmforge/"))))
+      (finally
+        (fs/delete-tree root)))))
+
+(deftest ensure-initial-gitignore-migrates-swarmforge-file-when-project-gitignore-missing
+  (let [root (tmp-dir)]
+    (try
+      (write-file (fs/path root ".gitignore.swarmforge") ".DS_Store\n")
+      (let [result (run {:dir root}
+                        (script "swarmforge.bb")
+                        "--test-ensure-initial-gitignore"
+                        (str root))
+            out (:out result)]
+        (is (str/includes? out ".DS_Store"))
+        (is (str/includes? out ".swarmforge/"))
+        (is (str/includes? out ".worktrees/"))
+        (is (str/includes? out "SWARMFORGE_GITIGNORE_REMOVED")))
+      (finally
+        (fs/delete-tree root)))))
+
 (deftest swarmforge-launcher-parses-extra-cli-args
   (let [root (tmp-dir)]
     (try

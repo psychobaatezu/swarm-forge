@@ -100,17 +100,21 @@
   (fs/create-dirs (fs/parent file))
   (when-not (fs/exists? file)
     (spit (str file) ""))
-  (let [lines (set (str/split-lines (slurp (str file))))]
+  (let [content (slurp (str file))
+        lines (set (str/split-lines content))]
     (when-not (contains? lines pattern)
-      (spit (str file) (str pattern "\n") :append true))))
+      (let [prefix (if (or (str/blank? content) (str/ends-with? content "\n")) "" "\n")]
+        (spit (str file) (str prefix pattern "\n") :append true)))))
 
 (defn ensure-initial-gitignore! [ctx]
-  (let [gitignore (fs/path (:working-dir ctx) ".gitignore")]
-    (if-not (fs/exists? gitignore)
-      (spit (str gitignore) ".swarmforge/\n.worktrees/\n")
-      (do
-        (ensure-in-file! gitignore ".swarmforge/")
-        (ensure-in-file! gitignore ".worktrees/")))))
+  (let [gitignore (fs/path (:working-dir ctx) ".gitignore")
+        swarmforge-gitignore (fs/path (:working-dir ctx) ".gitignore.swarmforge")]
+    (when (and (not (fs/exists? gitignore)) (fs/exists? swarmforge-gitignore))
+      (fs/move swarmforge-gitignore gitignore {:replace-existing true}))
+    (ensure-in-file! gitignore ".swarmforge/")
+    (ensure-in-file! gitignore ".worktrees/")
+    (when (fs/exists? swarmforge-gitignore)
+      (fs/delete swarmforge-gitignore))))
 
 (defn ensure-runtime-git-excludes! [ctx]
   (let [exclude-file (fs/path (sh-out "git" "-C" (str (:working-dir ctx)) "rev-parse" "--git-path" "info/exclude"))]
@@ -510,6 +514,7 @@
   (let [ctx (-> (context root)
                 detect-tmux-base-indexes)]
     (initialize-git-repo! ctx)
+    (ensure-initial-gitignore! ctx)
     (ensure-runtime-git-excludes! ctx)
     (let [ctx (prepare-ctx ctx)]
       (check-backend-dependencies! ctx)
@@ -577,6 +582,14 @@
 (defn test-sleep-inhibitor-prefix! []
   (println (str/join " " (or (sleep-inhibitor-prefix) []))))
 
+(defn test-ensure-initial-gitignore! [root]
+  (let [ctx (context root)
+        gitignore (fs/path root ".gitignore")
+        swarmforge-gitignore (fs/path root ".gitignore.swarmforge")]
+    (ensure-initial-gitignore! ctx)
+    (println (slurp (str gitignore)))
+    (println (if (fs/exists? swarmforge-gitignore) "SWARMFORGE_GITIGNORE_PRESENT" "SWARMFORGE_GITIGNORE_REMOVED"))))
+
 (defn -main [& args]
   (case (first args)
     "--test-parse" (test-parse! (or (second args) (System/getProperty "user.dir")))
@@ -586,6 +599,7 @@
                                      (drop 2 args))
     "--test-agent-start-delay" (println (env-long "SWARMFORGE_AGENT_START_DELAY_MS" 1500))
     "--test-sleep-inhibitor-prefix" (test-sleep-inhibitor-prefix!)
+    "--test-ensure-initial-gitignore" (test-ensure-initial-gitignore! (or (second args) (System/getProperty "user.dir")))
     "--test-tmux-base-indexes" (test-tmux-base-indexes! (second args))
     (run-main! (or (first args) (System/getProperty "user.dir")))))
 
