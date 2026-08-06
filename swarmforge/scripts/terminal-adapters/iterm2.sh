@@ -40,19 +40,49 @@ APPLESCRIPT
 terminal_open_session() {
   local session="$1"
   local title="$2"
+  local sibling_id="${3:-}"
 
-  osascript - "$WORKING_DIR" "$session" "$title" "$TMUX_SOCKET" <<'APPLESCRIPT'
+  osascript - "$WORKING_DIR" "$session" "$title" "$TMUX_SOCKET" "$sibling_id" <<'APPLESCRIPT'
 on run argv
   set workingDir to item 1 of argv
   set tmuxSession to item 2 of argv
   set windowTitle to item 3 of argv
   set tmuxSocket to item 4 of argv
+  set siblingSessionId to item 5 of argv
   set attachCmd to "cd " & quoted form of workingDir & " && exec tmux -S " & quoted form of tmuxSocket & " attach-session -t " & quoted form of tmuxSession
 
   tell application id "com.googlecode.iterm2"
     activate
-    set newWindow to (create window with default profile)
-    set newSession to current session of newWindow
+    set newSession to missing value
+
+    if siblingSessionId is not "" then
+      set siblingWindow to missing value
+      repeat with w in windows
+        repeat with t in tabs of w
+          repeat with s in sessions of t
+            if (id of s) is siblingSessionId then
+              set siblingWindow to w
+              exit repeat
+            end if
+          end repeat
+          if siblingWindow is not missing value then exit repeat
+        end repeat
+        if siblingWindow is not missing value then exit repeat
+      end repeat
+
+      if siblingWindow is not missing value then
+        tell siblingWindow
+          set newTab to (create tab with default profile)
+          set newSession to current session of newTab
+        end tell
+      end if
+    end if
+
+    if newSession is missing value then
+      set newWindow to (create window with default profile)
+      set newSession to current session of newWindow
+    end if
+
     tell newSession to write text attachCmd
     try
       set name of newSession to windowTitle
@@ -75,7 +105,7 @@ on run argv
       repeat with t in tabs of w
         repeat with s in sessions of t
           if (id of s) is targetId then
-            close w
+            close s
             return
           end if
         end repeat
