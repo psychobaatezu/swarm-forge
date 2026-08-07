@@ -7,13 +7,14 @@
 - Language tool table:
   - Go: install with `go install`; mutation `github.com/unclebob/mutate4go`, CRAP `github.com/unclebob/crap4go`, DRY `github.com/unclebob/dry4go`.
   - Clojure: install with Clojure CLI/deps.edn; mutation `github.com/unclebob/clj-mutate`, CRAP `github.com/unclebob/crap4clj`, DRY `github.com/unclebob/dry4clj`.
-  - Java/Kotlin: install with Maven (`mvn`); mutation `github.com/unclebob/mutate4java`, CRAP `github.com/unclebob/crap4java`, DRY `github.com/unclebob/dry4java`.
+  - Java: install with Maven (`mvn`); mutation `github.com/unclebob/mutate4java`, CRAP `github.com/unclebob/crap4java`, DRY `github.com/unclebob/dry4java`.
+  - Kotlin: install with Maven (`mvn`) or Gradle; CRAP `github.com/psychobaatezu/crap4kotlin`, DRY `github.com/marandaneto/dry4kotlin`.
 
 ## Language Defaults
 - For Clojure projects, prefer Babashka where possible.
 - For Clojure projects, prefer Speclj for unit and behavior tests.
 - For Clojure or Babashka projects using Speclj, use `github.com/unclebob/speclj-structure-check` to validate test syntax. If a Speclj spec file changed, run the structure check before executing the relevant test command.
-- For Java/Kotlin projects, avoid using Maven to run tests; build dedicated test runners and run those instead.
+- For Java projects, avoid using Maven to run tests; build dedicated test runners and run those instead.
 
 ## Design And Testability
 - Work in small, reviewable increments.
