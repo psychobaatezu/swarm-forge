@@ -5,7 +5,7 @@
 
 (def usage-message
   (str "Usage: merge_and_process <from-role> <commit-abbrev>\n\n"
-       "Merges the provided commit into the current branch/worktree."))
+       "Fast-forward merges the provided commit into the current branch/worktree."))
 
 (defn fail! [message]
   (binding [*out* *err*]
@@ -20,7 +20,7 @@
        (sh-ok? "git" "rev-parse" "--verify" (str commit "^{commit}"))))
 
 (defn merge! [commit]
-  (let [result (process/sh {:continue true} "git" "merge" "--no-edit" commit)]
+  (let [result (process/sh {:continue true} "git" "merge" "--ff-only" commit)]
     (when-not (zero? (:exit result))
       (fail! (str "merge_and_process failed to merge commit " commit "\n"
                   (:err result) (:out result))))))

@@ -122,8 +122,8 @@ merge_and_process coder a1b2c3d9
 ```
 
 `merge_and_process` is provided as a helper script in `swarmforge/scripts/` and
-can be used directly by agents. It merges the specified commit into the current
-worktree branch.
+can be used directly by agents. It fast-forward merges (`git merge --ff-only`)
+the specified commit into the current worktree branch.
 
 For broadcast handoffs, `to` preserves the full recipient list and `recipient`
 identifies the specific recipient copy.
