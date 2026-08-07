@@ -22,6 +22,8 @@ By coder.
 
 ## Temporary Files
 - Use `./tmp/` in your assigned worktree for temporary files; do not use `/tmp`.
+- Do not delete or reset unrelated existing files under `./tmp/` between normal runs.
+- Clean up only temporary files your current task created, unless the user explicitly requests broader cleanup.
 
 ## Failure Conditions
 - If the expected git layout or assigned worktree is missing, stop and report instead of silently working in the wrong place.
