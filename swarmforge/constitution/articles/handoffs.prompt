@@ -47,7 +47,7 @@ message: <one line, max 80 chars>
 - Do not hand-edit, merge, stage, or commit handoff runtime state.
 
 ## Receiving Handoffs
-- When notified, run `ready_for_next.sh`.
+- When notified, run `ready_for_next.sh` from `PATH` or run `./swarmforge/scripts/ready_for_next.sh` from the worktree root.
 - `ready_for_next.sh` dispatches to the task or batch helper configured for
   your role.
 - If it prints `NO_TASK`, stop waiting for work.
@@ -58,7 +58,7 @@ message: <one line, max 80 chars>
   current batch in helper-delivered order.
 - Use only the task information printed by the helper scripts.
 - If a tmux wake-up arrives while already working on a task, ignore it.
-- When the task or batch is fully complete, run `done_with_current.sh`.
+- When the task or batch is fully complete, run `done_with_current.sh` from `PATH` or run `./swarmforge/scripts/done_with_current.sh` from the worktree root.
 - `note` handoffs are tasks too; after reading or acting on a note, run
   `done_with_current.sh` before accepting any other handoff.
 - If `done_with_current.sh` prints `TASK: <path>`, treat the printed `PAYLOAD`

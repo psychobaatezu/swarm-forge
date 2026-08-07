@@ -8,7 +8,7 @@
 
 (def poll-ms 1000)
 (def wake-message
-  "You have new handoff mail. If idle, run ready_for_next.sh.")
+  "You have new handoff mail. If idle, run ready_for_next.sh (or ./swarmforge/scripts/ready_for_next.sh).")
 
 (defn usage []
   (binding [*out* *err*]
