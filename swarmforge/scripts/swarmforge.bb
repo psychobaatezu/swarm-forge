@@ -33,6 +33,17 @@
       default-value)
     default-value))
 
+(defn normalize-session-layout [layout]
+  (case (str/lower-case layout)
+    ("windows" "single-session") "windows"
+    "sessions"))
+
+(defn session-layout []
+  (normalize-session-layout (or (System/getenv "SWARMFORGE_LAYOUT") "sessions")))
+
+(defn windows-layout? [ctx]
+  (= "windows" (:session-layout ctx)))
+
 (defn fail! [message]
   (binding [*out* *err*]
     (println message))
@@ -180,13 +191,14 @@
                                       working-dir
                                       (worktree-path-for-name worktrees-dir worktree))
                       row {:role role
-                           :agent agent
-                           :session (session-name-for-role role)
-                           :display-name (display-name-for-role role)
-                           :worktree-name worktree
-                           :worktree-path worktree-path
-                           :receive-mode receive-mode
-                           :extra-args extra-args}]
+                            :agent agent
+                            :session (session-name-for-role role)
+                            :notify-target (session-name-for-role role)
+                            :display-name (display-name-for-role role)
+                            :worktree-name worktree
+                            :worktree-path worktree-path
+                            :receive-mode receive-mode
+                            :extra-args extra-args}]
                   (recur (next lines)
                          (conj rows row)
                          (conj roles role)
@@ -209,14 +221,15 @@
   (spit (str (:roles-file ctx))
         (apply str
                (for [row (:roles ctx)]
-                 (format "%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
+                 (format "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
                          (:role row)
                          (:worktree-name row)
                          (:worktree-path row)
                          (:session row)
                          (:display-name row)
                          (:agent row)
-                         (:receive-mode row))))))
+                         (:receive-mode row)
+                         (:notify-target row))))))
 
 (def required-helpers
   ["handoff_lib.bb" "swarm_handoff.sh" "swarm_handoff.bb"
@@ -303,6 +316,21 @@
   (sh "tmux" "-S" (:tmux-socket ctx) "rename-window" "-t" (str session ":" agent-window) title)
   (sh "tmux" "-S" (:tmux-socket ctx) "set-window-option" "-t" (str session ":" title) "allow-rename" "off"))
 
+(defn create-role-windows-in-single-session! [ctx]
+  (let [[first-row & remaining] (:roles ctx)
+        shared-session (:session first-row)]
+    (sh "tmux" "-S" (:tmux-socket ctx) "new-session" "-d" "-s" shared-session "-n" (:display-name first-row))
+    (sh "tmux" "-S" (:tmux-socket ctx) "set-window-option" "-t" (str shared-session ":" (:display-name first-row)) "allow-rename" "off")
+    (doseq [row remaining]
+      (sh "tmux" "-S" (:tmux-socket ctx) "new-window" "-d" "-t" shared-session "-n" (:display-name row))
+      (sh "tmux" "-S" (:tmux-socket ctx) "set-window-option" "-t" (str shared-session ":" (:display-name row)) "allow-rename" "off"))))
+
+(defn create-tmux-layout! [ctx]
+  (if (windows-layout? ctx)
+    (create-role-windows-in-single-session! ctx)
+    (doseq [row (:roles ctx)]
+      (create-role-session! ctx (:session row) (:display-name row)))))
+
 (defn write-agent-instruction-file! [role prompt-file]
   (spit (str prompt-file)
         (str "Read swarmforge/constitution.prompt, then read every file it refers to recursively, and obey all of those instructions.\n"
@@ -351,7 +379,7 @@
            " nohup " (sq (str (fs/path (:script-dir ctx) "swarm-cleanup.sh")))
            " " (sq (:tmux-socket ctx))
            " " (sq (str (:window-ids-file ctx)))
-           (apply str (map #(str " " (sq (:session %))) (:roles ctx)))
+           (apply str (map #(str " " (sq %)) (distinct (map :session (:roles ctx)))))
            " >/dev/null 2>&1 &!; exit $exit_code"))))
 
 (defn launch-role! [ctx index row]
@@ -426,23 +454,33 @@
 (defn open-terminal-surfaces! [ctx]
   (if (terminal-call-ok? ctx "terminal_backend_can_open_sessions")
     (do
-      (println (str "Opening separate " (terminal-call-out ctx "terminal_backend_label") " surfaces for each session..."))
+      (if (windows-layout? ctx)
+        (println (str "Opening one " (terminal-call-out ctx "terminal_backend_label") " surface attached to a single tmux session with one window per role..."))
+        (println (str "Opening separate " (terminal-call-out ctx "terminal_backend_label") " surfaces for each session...")))
       (when (terminal-call-ok? ctx "terminal_backend_tracks_windows")
         (spit (str (:window-ids-file ctx)) "")
         (spit (str (:window-state-file ctx)) ""))
-      (loop [rows (:roles ctx)
-             index 0
-             previous-window-id ""]
-        (when-let [row (first rows)]
-          (let [window-id (terminal-call-out ctx "terminal_open_session" (:session row) (str "SwarmForge " (:display-name row)) previous-window-id)]
-            (if (terminal-call-ok? ctx "terminal_backend_tracks_windows")
-              (do
-                (spit (str (:window-ids-file ctx)) (str window-id "\n") :append true)
-                (spit (str (:window-state-file ctx))
-                      (format "%d\t%s\t%s\t%s\n" (inc index) window-id (:session row) (str "SwarmForge " (:display-name row)))
-                      :append true)
-                (recur (next rows) (inc index) window-id))
-              (recur (next rows) (inc index) previous-window-id)))))
+      (if (windows-layout? ctx)
+        (let [row (first (:roles ctx))
+              window-id (terminal-call-out ctx "terminal_open_session" (:session row) "SwarmForge" "")]
+          (when (terminal-call-ok? ctx "terminal_backend_tracks_windows")
+            (spit (str (:window-ids-file ctx)) (str window-id "\n") :append true)
+            (spit (str (:window-state-file ctx))
+                  (format "%d\t%s\t%s\t%s\n" 1 window-id (:session row) "SwarmForge")
+                  :append true)))
+        (loop [rows (:roles ctx)
+               index 0
+               previous-window-id ""]
+          (when-let [row (first rows)]
+            (let [window-id (terminal-call-out ctx "terminal_open_session" (:session row) (str "SwarmForge " (:display-name row)) previous-window-id)]
+              (if (terminal-call-ok? ctx "terminal_backend_tracks_windows")
+                (do
+                  (spit (str (:window-ids-file ctx)) (str window-id "\n") :append true)
+                  (spit (str (:window-state-file ctx))
+                        (format "%d\t%s\t%s\t%s\n" (inc index) window-id (:session row) (str "SwarmForge " (:display-name row)))
+                        :append true)
+                  (recur (next rows) (inc index) window-id))
+                (recur (next rows) (inc index) previous-window-id))))))
       (if (terminal-call-ok? ctx "terminal_backend_tracks_windows")
         (process/process [(str (fs/path (:script-dir ctx) "swarm-window-watchdog.sh"))
                           (str (:window-state-file ctx))
@@ -488,14 +526,28 @@
      :handoff-daemon-log (fs/path daemon-dir "handoffd.log")
      :tmux-socket-dir tmux-socket-dir
      :tmux-socket tmux-socket
+     :session-layout (session-layout)
      :tmux-socket-file (fs/path state-dir "tmux-socket")
      :tmux-env-file (fs/path state-dir "tmux-env")
      :tmux-window-base-index 0
      :tmux-pane-base-index 0}))
 
+(defn apply-session-layout [ctx]
+  (if (windows-layout? ctx)
+    (let [shared-session session-prefix]
+      (update ctx :roles
+              (fn [roles]
+                (mapv (fn [row]
+                        (assoc row
+                               :session shared-session
+                               :notify-target (str shared-session ":" (:display-name row))))
+                      roles))))
+    ctx))
+
 (defn prepare-ctx [ctx]
   (-> ctx
       parse-config
+      apply-session-layout
       (assoc :terminal-backend (detect-terminal-backend))))
 
 (defn test-parse! [root]
@@ -533,8 +585,7 @@
         (println "  Disciplined agents build better software")
         (println reset)
         (println (str green "Launching SwarmForge tmux sessions..." reset))
-        (doseq [row (:roles ctx)]
-          (create-role-session! ctx (:session row) (:display-name row)))
+        (create-tmux-layout! ctx)
         (write-tmux-env-file! ctx)
         (sync-worktree-scripts! ctx)
         (start-handoff-daemon! ctx)

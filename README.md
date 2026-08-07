@@ -268,12 +268,15 @@ After copying a runnable branch, set `SWARMFORGE_TERMINAL` to override detection
 
 ```sh
 SWARMFORGE_TERMINAL=ghostty ./swarm
+SWARMFORGE_LAYOUT=windows SWARMFORGE_TERMINAL=iterm2 ./swarm
 SWARMFORGE_TERMINAL=terminal-app ./swarm
 SWARMFORGE_TERMINAL=windows-terminal ./swarm
 SWARMFORGE_TERMINAL=none ./swarm
 ```
 
 Use `ghostty` when you want SwarmForge to open Ghostty tabs instead of the default Terminal.app windows. Use `windows-terminal` when you want SwarmForge to open Windows Terminal windows from WSL. Use `none` when you want SwarmForge to skip terminal automation and attach the cleanup tmux session in the current shell.
+
+Set `SWARMFORGE_LAYOUT=windows` when you want SwarmForge to create one tmux session with one tmux window per role, instead of one tmux session per role. In this mode, terminal automation opens one terminal surface attached to the shared session.
 
 ### Adding A Terminal Backend
 

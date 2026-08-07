@@ -45,12 +45,13 @@
   (into {}
         (for [line (read-lines roles-file)
               :when (not (str/blank? line))
-              :let [[role worktree-name worktree-path session display agent receive-mode]
+              :let [[role worktree-name worktree-path session display agent receive-mode notify-target]
                     (str/split line #"\t")]]
           [role {:role role
                  :worktree-name worktree-name
                  :worktree-path worktree-path
                  :session session
+                 :notify-target (or notify-target session)
                  :display display
                  :agent agent
                  :receive-mode (or receive-mode "task")}])))
@@ -137,7 +138,7 @@
               (fs/create-dirs (fs/parent target))
               (when-not (fs/exists? target)
                 (spit (str target) (render-message (:headers delivered) (:body delivered))))
-              (notify! socket (:session role-info)))))
+               (notify! socket (:notify-target role-info)))))
         (move-with-collision path
                              (fs/path (get-in roles [sender-role :worktree-path])
                                       ".swarmforge" "handoffs" "sent"))

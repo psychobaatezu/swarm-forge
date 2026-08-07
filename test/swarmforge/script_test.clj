@@ -128,6 +128,31 @@
       (finally
         (fs/delete-tree root)))))
 
+(deftest swarmforge-layout-windows-uses-single-tmux-session
+  (let [root (tmp-dir)]
+    (try
+      (write-file (fs/path root "swarmforge/constitution.prompt")
+                  "Read articles.\n")
+      (write-file (fs/path root "swarmforge/swarmforge.conf")
+                  (str "window coder codex master\n"
+                       "window cleaner codex cleaner batch\n"))
+      (write-file (fs/path root "swarmforge/roles/coder.prompt") "coder\n")
+      (write-file (fs/path root "swarmforge/roles/cleaner.prompt") "cleaner\n")
+      (let [result (run {:dir root
+                         :env {"SWARMFORGE_LAYOUT" "windows"}}
+                        (script "swarmforge.bb")
+                        "--test-parse"
+                        (str root))
+            out (:out result)]
+        (is (str/includes? out "1\tcoder\tswarmforge\tCoder\tcodex"))
+        (is (str/includes? out "2\tcleaner\tswarmforge\tCleaner\tcodex"))
+        (is (str/includes? out "coder\tmaster"))
+        (is (str/includes? out "cleaner\tcleaner"))
+        (is (str/includes? out "\ttask\tswarmforge:Coder"))
+        (is (str/includes? out "\tbatch\tswarmforge:Cleaner")))
+      (finally
+        (fs/delete-tree root)))))
+
 (deftest swarmforge-uses-portable-tmux-socket-dir
   (let [root (tmp-dir)]
     (try
