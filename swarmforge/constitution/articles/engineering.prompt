@@ -15,6 +15,7 @@
 - For Clojure projects, prefer Speclj for unit and behavior tests.
 - For Clojure or Babashka projects using Speclj, use `github.com/unclebob/speclj-structure-check` to validate test syntax. If a Speclj spec file changed, run the structure check before executing the relevant test command.
 - For Java projects, avoid using Maven to run tests; build dedicated test runners and run those instead.
+- For Kotlin projects, avoid using Maven to run tests; build dedicated test runners and run those instead.
 
 ## Design And Testability
 - Work in small, reviewable increments.
