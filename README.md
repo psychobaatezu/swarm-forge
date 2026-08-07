@@ -18,9 +18,18 @@ It provides a shared structure for role-specific prompts, worktree assignment, t
 
 The runnable SwarmForge configurations live on dedicated branches. Each branch contains the `swarmforge/swarmforge.conf`, local constitution articles, and role prompts for one workflow. At startup, its `./swarm` wrapper copies the shared operational scripts and shared constitution articles from `main` when they are not already present, then launches that branch's local configuration.
 
+### `two-pack`
+
+`two-pack` is the quick backend workflow. Use it for small tasks that benefit from fast coding without the overhead of Gherkin and acceptance testing, while still preserving backend refactoring and hardening.
+
+- `coder` implements requested behavior with TDD and unit tests.
+- `cleaner` batches coder handoffs and performs cleanup, CRAP and DRY review, architectural review, encapsulation and separation-of-concerns fixes, and language mutation hardening.
+
+The normal flow is `coder` -> `cleaner` -> `coder`. Use this branch when you want a tight implementation/refinement loop without specification, QA, property-test, or acceptance-test roles.
+
 ### `four-pack`
 
-`four-pack` is the compact workflow. It keeps the swarm small while preserving a complete delivery path:
+`four-pack` is the compact specification workflow. Use it for moderate projects that require Gherkin specification and some architectural consideration without splitting every quality gate into its own agent:
 
 - `specifier` turns user intent into precise Gherkin acceptance specifications and asks for approval before handoff.
 - `coder` implements approved behavior slices with TDD, unit tests, and generated acceptance tests.
@@ -31,7 +40,7 @@ The normal flow is `specifier` -> `coder` -> `refactorer` -> `architect` -> `spe
 
 ### `six-pack`
 
-`six-pack` is the full workflow. It separates each major quality gate into its own role:
+`six-pack` is the full workflow. Use it for major projects that require full specification, up-front QA, backend verification, and significant architectural consideration. It separates each major quality gate into its own role:
 
 - `specifier` turns user intent into accepted Gherkin specifications and end-to-end QA procedures.
 - `coder` implements approved behavior slices with TDD, unit tests, and generated acceptance tests.
@@ -50,7 +59,7 @@ SwarmForge runs locally. Before starting a runnable branch, make sure the target
 - `git`
 - `tmux`
 - Babashka (`bb`)
-- At least one configured agent backend, such as `codex`, `claude`, `copilot`, or `grok`
+- At least one configured agent backend, such as `codex`, `claude`, `copilot`, `grok`, or `opencode`
 
 ## Getting Started
 
@@ -58,14 +67,15 @@ In the directory where you want to use SwarmForge, choose a runnable branch and 
 
 ```sh
 BRANCH=four-pack
-curl -L "https://github.com/unclebob/swarm-forge/archive/refs/heads/${BRANCH}.tar.gz" | tar -xz --strip-components=1
+curl -L "https://github.com/psychobaatezu/swarm-forge/archive/refs/heads/${BRANCH}.tar.gz" | tar -xz --strip-components=1
 ```
 
-Use `BRANCH=six-pack` instead when you want the six-agent workflow. Do not use `main` for this command; `main` is documentary and stores the shared operational scripts, while the runnable branches provide the configurations and prompts intended for projects.
+Use `BRANCH=two-pack` for the quick two-agent workflow, `BRANCH=four-pack` for the compact specification workflow, or `BRANCH=six-pack` for the full six-agent workflow. Do not use `main` for this command; `main` is documentary and stores the shared operational scripts, while the runnable branches provide the configurations and prompts intended for projects.
 
-After copying a runnable branch, start the swarm from the target project:
+After copying a runnable branch, set the shared scripts archive source to this fork and start the swarm from the target project:
 
 ```sh
+export SWARMFORGE_SCRIPTS_URL="https://github.com/psychobaatezu/swarm-forge/archive/refs/heads/main.tar.gz"
 ./swarm
 ```
 
@@ -75,6 +85,8 @@ The windows should open automatically.
 
 To stop the swarm, close the first window listed in `swarmforge/swarmforge.conf`. That cleanup window shuts down the tmux sessions and closes the remaining tracked windows.
 
+While a swarm is active, SwarmForge tries to prevent the host from sleeping. On macOS it uses `caffeinate`; on Linux it uses `systemd-inhibit` when available. Display lock or manual sleep can still interrupt agents depending on the OS. Set `SWARMFORGE_PREVENT_SLEEP=0` before `./swarm` to disable this behavior.
+
 ## What SwarmForge Does
 
 SwarmForge is a lightweight, tmux-based orchestration layer that:
@@ -82,7 +94,7 @@ SwarmForge is a lightweight, tmux-based orchestration layer that:
 - Launches a **config-driven swarm** from a project-local `swarmforge/swarmforge.conf`
 - Creates one tmux session per configured role and opens a terminal surface for each role when the selected backend supports it
 - Reads behavior from project-local `swarmforge/roles/<role>.prompt` files plus a layered `swarmforge/constitution.prompt`
-- Supports per-role backends such as `claude`, `codex`, `copilot`, or `grok`
+- Supports per-role backends such as `claude`, `codex`, `copilot`, `grok`, or `opencode`
 - Puts the shared `swarmforge/scripts/` directory on each agent's `PATH`, including handoff helpers for active swarm communication
 - Creates git worktrees under `.worktrees/` for roles assigned to dedicated worktree names
 - Initializes a git repository in a new working directory when needed
@@ -93,7 +105,7 @@ SwarmForge is a lightweight, tmux-based orchestration layer that:
 - **Config-Driven Topology** — The swarm shape comes from `swarmforge/swarmforge.conf`, not hardcoded shell variables.
 - **Project-Local Roles** — Each role is defined by `swarmforge/roles/<role>.prompt` in the working tree being orchestrated.
 - **Layered Constitution** — `swarmforge/constitution.prompt` directs agents to read article files under `swarmforge/constitution/articles/`.
-- **Backend Selection Per Role** — A role can launch `claude`, `codex`, `copilot`, or `grok`.
+- **Backend Selection Per Role** — A role can launch `claude`, `codex`, `copilot`, `grok`, or `opencode`.
 - **Observable Swarm** — Open one Terminal window per role and watch the sessions in real time.
 - **Self-Hosted & Lightweight** — Runs locally in tmux and Terminal with minimal machinery.
 
@@ -155,7 +167,8 @@ In a runnable branch:
 6. Startup creates one git worktree per configured role under `.worktrees/`, unless the role is assigned to `master` or `none`.
 7. Startup syncs `swarmforge/scripts/` and missing shared constitution articles into each role worktree and puts that local scripts directory on each agent's `PATH`, so agents use local handoff helpers without reaching back into the master checkout.
 8. SwarmForge creates tmux sessions, opens terminal windows, and launches each configured backend in its assigned worktree.
-9. Roles communicate through daemon-delivered handoff files. Agents create validated drafts with `swarm_handoff.sh`, accept work with `ready_for_next.sh`, and complete work with `done_with_current.sh`.
+9. Startup starts an OS-specific sleep inhibitor when one is available, and cleanup stops it with the swarm.
+10. Roles communicate through daemon-delivered handoff files. Agents create validated drafts with `swarm_handoff.sh`, accept work with `ready_for_next.sh`, and complete work with `done_with_current.sh`.
 
 ## Handoff Protocol
 
@@ -197,10 +210,17 @@ The durable handoff files and lifecycle headers replace the old logbook and rese
 `swarmforge/swarmforge.conf` defines the swarm window-by-window. Each line has this form:
 
 ```conf
-window <role> <agent> <worktree> [task|batch]
+window <role> <agent> <worktree> [task|batch] [extra-cli-args...]
 ```
 
 The optional receive mode defaults to `task`. Use `batch` for roles that should consume all currently queued equal-priority handoffs as one batch.
+
+Any fields after the receive mode are passed directly to the agent CLI as additional arguments. If you omit the receive mode, extra arguments may start at the fifth field:
+
+```conf
+window coder copilot wt-coder --yolo
+window architect claude wt-arch task --dangerously-skip-permissions
+```
 
 You can define as many windows as your project needs. Each `role` maps to a corresponding prompt file at `swarmforge/roles/<role>.prompt`, so a config containing `architect`, `coder`, `reviewer`, `research`, and `release` windows would expect:
 
@@ -248,12 +268,15 @@ After copying a runnable branch, set `SWARMFORGE_TERMINAL` to override detection
 
 ```sh
 SWARMFORGE_TERMINAL=ghostty ./swarm
+SWARMFORGE_LAYOUT=windows SWARMFORGE_TERMINAL=iterm2 ./swarm
 SWARMFORGE_TERMINAL=terminal-app ./swarm
 SWARMFORGE_TERMINAL=windows-terminal ./swarm
 SWARMFORGE_TERMINAL=none ./swarm
 ```
 
 Use `ghostty` when you want SwarmForge to open Ghostty tabs instead of the default Terminal.app windows. Use `windows-terminal` when you want SwarmForge to open Windows Terminal windows from WSL. Use `none` when you want SwarmForge to skip terminal automation and attach the cleanup tmux session in the current shell.
+
+Set `SWARMFORGE_LAYOUT=windows` when you want SwarmForge to create one tmux session with one tmux window per role, instead of one tmux session per role. In this mode, terminal automation opens one terminal surface attached to the shared session.
 
 ### Adding A Terminal Backend
 
