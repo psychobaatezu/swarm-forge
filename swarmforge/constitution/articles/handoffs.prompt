@@ -50,6 +50,10 @@ message: <one line, max 80 chars>
 - When notified, run `ready_for_next.sh` from `PATH` or run `./swarmforge/scripts/ready_for_next.sh` from the worktree root.
 - `ready_for_next.sh` dispatches to the task or batch helper configured for
   your role.
+- Before acting on accepted handoff payloads, re-read your role prompt,
+  constitution, and project agent-instruction files when present (for example
+  `CLAUDE.md`, `AGENTS.md`, files under `.opencode/`, and files under
+  `.claude/`).
 - If it prints `NO_TASK`, stop waiting for work.
 - If it prints `TASK: <path>`, treat the printed `PAYLOAD` as the task.
 - If it prints `TASK_NAME: <name>`, use that as the stable task name for any

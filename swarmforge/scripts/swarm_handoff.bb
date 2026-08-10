@@ -264,10 +264,10 @@
 
 (defn body [type sender canonical-commit note-message]
   (case type
-    "git_handoff" (str "Re-read your role and constitution.\n\n"
+    "git_handoff" (str "Re-read your role, constitution, and project agent-instruction files (for example CLAUDE.md, AGENTS.md, files under .opencode/, and files under .claude/).\n\n"
                         "Run merge_and_process " sender " " canonical-commit
                         " (or git merge --ff-only " canonical-commit ").")
-    "note" (str "Re-read your role and constitution.\n\n" note-message)))
+    "note" (str "Re-read your role, constitution, and project agent-instruction files (for example CLAUDE.md, AGENTS.md, files under .opencode/, and files under .claude/).\n\n" note-message)))
 
 (defn write-handoff! [{:keys [headers recipients canonical-commit sender]}]
   (let [timestamp-id (id-timestamp)

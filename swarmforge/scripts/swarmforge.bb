@@ -334,7 +334,8 @@
 (defn write-agent-instruction-file! [role prompt-file]
   (spit (str prompt-file)
         (str "Read swarmforge/constitution.prompt, then read every file it refers to recursively, and obey all of those instructions.\n"
-             "Read swarmforge/roles/" role ".prompt, then read every file it refers to recursively, and follow all of those instructions.\n")))
+             "Read swarmforge/roles/" role ".prompt, then read every file it refers to recursively, and follow all of those instructions.\n"
+             "If present in your current worktree, read project agent-instruction files (for example CLAUDE.md, AGENTS.md, files under .opencode/, and files under .claude/) and follow them.\n")))
 
 (defn extra-args-prefix [row]
   (let [args (:extra-args row)]
