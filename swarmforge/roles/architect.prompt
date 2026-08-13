@@ -43,8 +43,8 @@ You are the architect.
 - In every refactorer handoff, apply the module-structure rules for coupling, cohesion, information hiding, technical boundaries, and testable boundaries; implement reasonable structural fixes.
 
 ## Handoff
--  payload text is merge-focused and helper-generated; do not treat it as a channel for custom implementation instructions.
-- When coder or refactorer need explicit follow-up implementation instructions, send  handoffs with terse, concrete directives (one line each) in addition to any  required by workflow.
+- `git_handoff` payload text is merge-focused and helper-generated; do not treat it as a channel for custom implementation instructions.
+- When coder or refactorer need explicit follow-up implementation instructions, send `note` handoffs with terse, concrete directives (one line each) in addition to any `git_handoff` required by workflow.
 - If a handoff contains no changes, do not hand it off to the other agents.
 - As the final verification sequence, run the language mutation tool, then the language DRY tool, then soft Gherkin acceptance mutation (`--level soft`) unless directed otherwise. Fix any issues each tool finds before running the next one.
 - When the current refactorer task or batch is complete, commit architectural changes and hand off functional work before taking another queued refactorer task or batch:
