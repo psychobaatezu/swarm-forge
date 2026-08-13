@@ -266,7 +266,7 @@
   (case type
     "git_handoff" (str "Re-read your role, constitution, and project agent-instruction files (for example CLAUDE.md, AGENTS.md, files under .opencode/, and files under .claude/).\n\n"
                         "Run merge_and_process " sender " " canonical-commit
-                        " (or git merge --ff-only " canonical-commit ").")
+                        " (or git merge --no-edit " canonical-commit ").")
     "note" (str "Re-read your role, constitution, and project agent-instruction files (for example CLAUDE.md, AGENTS.md, files under .opencode/, and files under .claude/).\n\n" note-message)))
 
 (defn write-handoff! [{:keys [headers recipients canonical-commit sender]}]
